@@ -4,6 +4,7 @@ from . import core
 from .compute_graph import make_graph
 from .eval import Array, zeros
 from .nested_containers import flatten, unflatten
+from scipy import special
 
 
 def grad(fn):
@@ -112,6 +113,9 @@ vjp_rules = {
     core.mul: lambda t, _, x, y: (t * y, x * t),
     core.reciprocal: lambda t, _, x: -core.reciprocal(core.square(x)) * t,
     core.relu: lambda t, out, x: core.where(out, t, Array(0)),  # np.bool_(0) = False
+    core.leaky_relu : lambda t, out, x, a:core.where(out, t, t * a),
+    core.elu : lambda t, out, x, a:core.where(out, t, t * a * core.exp(x)),
+    core.gelu : lambda t, out, x: 1/2 * (1 + special.erf(x/core.sqrt(2))) + (x*core.exp(-core.square(x)/2))/(core.sqrt(2*x)),
     core.square: lambda t, _, x: t * Array(2) * x,
     core.sqrt: lambda t, _, x: t / (Array(2) * core.sqrt(x)),
     core.exp: lambda t, out, x: t * out,
