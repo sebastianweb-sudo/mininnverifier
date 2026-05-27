@@ -111,6 +111,21 @@ def vjp_pad(t, x, config, axes):
         slices[ax] = slice(start, stop, step)
     return t[tuple(slices)]
 
+def vjp_conv2d(t, out, x, K, stride):
+    # 1) dx = conv2d(t, flipped K)
+    K_flip = core.flip(K, axes=(2, 3))
+    K_flip_T = core.moveaxis(K_flip, 0, 1)  # swap Cout/Cin
+    dx = core.conv2d(t, K_flip_T, stride=stride)
+
+    # 2) dK = conv2d(x, t_reshaped)
+    # reshape t so that batch becomes input channels
+    t_reshaped = core.moveaxis(t, 0, 1)  # (C_out, N, Ht, Wt)
+    dK = core.conv2d(x, t_reshaped, stride=stride)
+
+    return dx, dK
+
+
+
 
 
 vjp_rules = {
@@ -131,6 +146,9 @@ vjp_rules = {
     core.sqrt: lambda t, _, x: t / (Array(2) * core.sqrt(x)),
     core.exp: lambda t, out, x: t * out,
     core.log: lambda t, _, x: t / x,
+    core.flip: lambda t, out, x, axes: core.flip(t, axes),
     core.where: vjp_where,
     core.pad: lambda t, out, x, config, axes, value: vjp_pad(t, x, config, axes),
+    core.conv: vjp_conv2d,
+
 }
