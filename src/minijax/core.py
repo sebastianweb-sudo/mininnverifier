@@ -104,6 +104,42 @@ class PaddingPrimitiv(Primitive):
         assert all(isinstance(v, int) and v >= 0 for v in (ℓ, r, m)), "config values must be non-negative integers"
 
         return super().__call__(x, config=config, axes=axes, value=value)
+    
+class Conv2DPrimitive(Primitive):
+    def __init__(self):
+        super().__init__("conv", 2, ("stride",))
+
+    def __call__(self, x, K, stride: int = 1):
+        # 1. stride muss positive ganze Zahl sein
+        assert isinstance(stride, int) and stride >= 1, "stride must be a positive integer"
+
+        # 2. x muss 4D sein: (N, C_in, H, W)
+        assert len(x.shape) == 4, "Input x must have shape (N, C_in, H, W)"
+
+        # 3. K muss 4D sein: (C_out, C_in, kH, kW)
+        assert len(K.shape) == 4, "Kernel K must have shape (C_out, C_in, kH, kW)"
+
+        # 4. Kanalanzahl muss übereinstimmen
+        assert x.shape[1] == K.shape[1], (
+            f"Input channels ({x.shape[1]}) must match kernel channels ({K.shape[1]})"
+        )
+
+        # 5. Kernel darf nicht größer sein als das Bild
+        assert x.shape[2] >= K.shape[2] and x.shape[3] >= K.shape[3], (
+            "Kernel spatial size must not exceed input spatial size"
+        )
+
+        # 6. Output muss ganzzahlig sein
+        H_out = (x.shape[2] - K.shape[2]) / stride + 1
+        W_out = (x.shape[3] - K.shape[3]) / stride + 1
+        assert H_out.is_integer() and W_out.is_integer(), (
+            "Invalid stride: output dimensions must be integers"
+        )
+
+        return super().__call__(x, K, stride=stride)
+
+
+
 
 neg = Primitive("neg", 1)
 add = Primitive("add", 2)
@@ -122,8 +158,10 @@ where = Primitive("where", 3)
 expand_dims = Primitive("expand_dims", 1, ("axes",))
 moveaxis = Primitive("moveaxis", 1, ("source", "destination"))
 reshape = Primitive("reshape", 1, ("new_shape",))
+flip = Primitive("flip", 1, ("axes",))
 reduce_sum = ReduceSumPrimitive()
 pad = PaddingPrimitiv()
+conv = Conv2DPrimitive()
 
 
 def sub(x, y):

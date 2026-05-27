@@ -70,6 +70,34 @@ def np_pad(x, config, axes, value):
             y = expanded
     return y
 
+def np_conv2d(x, K, stride=1):
+    N, C_in, H, W = x.shape
+    C_out, _, kH, kW = K.shape
+
+    H_out = (H - kH) // stride + 1
+    W_out = (W - kW) // stride + 1
+
+    # 1) Extrahiere alle Patches aus x (im2col)
+    patches = np.lib.stride_tricks.as_strided(
+        x,
+        shape=(N, C_in, H_out, W_out, kH, kW),
+        strides=(
+            x.strides[0],
+            x.strides[1],
+            x.strides[2] * stride,
+            x.strides[3] * stride,
+            x.strides[2],
+            x.strides[3],
+        ),
+        writeable=False,
+    )
+
+    y = np.einsum("nchwij, Ccij -> nChw", patches, K)
+
+    return y
+
+
+
 
 
 eval_rules = {
@@ -90,6 +118,9 @@ eval_rules = {
     core.sqrt: np.sqrt,
     core.exp: np.exp,
     core.log: np.log,
+    core.flip: lambda x, axes: np.flip(x, axis=axes),
     core.where: np.where,
     core.pad: np_pad,
+    core.conv: np_conv2d,
+
 }
