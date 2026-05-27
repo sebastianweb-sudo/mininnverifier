@@ -101,6 +101,17 @@ def vjp_where(tangent, out, cond, true_val, false_val):
     zero = zeros(cond.shape)
     return (zero, core.where(cond, tangent, zero), core.where(cond, zero, tangent))
 
+def vjp_pad(t, x, config, axes):
+    ℓ, r, m = config
+    slices = [slice(None)] * x.ndim
+    for ax in axes:
+        start = ℓ
+        stop = ℓ + x.shape[ax] + (x.shape[ax] - 1) * m
+        step = m + 1
+        slices[ax] = slice(start, stop, step)
+    return t[tuple(slices)]
+
+
 
 vjp_rules = {
     core.expand_dims: lambda t, _, x, axes: core.reduce_sum(t, axes),
@@ -121,4 +132,5 @@ vjp_rules = {
     core.exp: lambda t, out, x: t * out,
     core.log: lambda t, _, x: t / x,
     core.where: vjp_where,
+    core.pad: lambda t, out, x, config, axes, value: vjp_pad(t, x, config, axes),
 }

@@ -53,6 +53,24 @@ def np_dot(x, y):  # np.dot doesn't broadcast
         return np.dot(x, y)
     return np.einsum("...j,...jk", x, y)
 
+def np_pad(x, config, axes, value):
+    ℓ, r, m = config
+    pad_width = [(0, 0)] * x.ndim
+    for ax in axes:
+        pad_width[ax] = (ℓ, r)
+    y = np.pad(x, pad_width, constant_values=value)
+    if m > 0:
+        shape = list(y.shape)
+        for ax in axes:
+            new_shape = shape[ax] + (shape[ax] - 1) * m
+            expanded = np.full(new_shape, value, dtype=np.float64)
+            idx = [slice(None)] * y.ndim
+            idx[ax] = slice(ℓ, new_shape - r, m + 1)
+            expanded[tuple(idx)] = y
+            y = expanded
+    return y
+
+
 
 eval_rules = {
     core.expand_dims: lambda x, axes: np.expand_dims(x, axes),
@@ -73,4 +91,5 @@ eval_rules = {
     core.exp: np.exp,
     core.log: np.log,
     core.where: np.where,
+    core.pad: np_pad,
 }
