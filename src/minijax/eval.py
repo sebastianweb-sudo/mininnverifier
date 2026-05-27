@@ -1,6 +1,7 @@
 # Copyright (c) 2025 by David Boetius
 # Licensed under the MIT Licensed.
 import numpy as np
+from scipy import special
 
 from . import core
 
@@ -64,6 +65,9 @@ eval_rules = {
     core.mul: lambda x, y: x * y,
     core.reciprocal: lambda x: 1 / x,
     core.relu: lambda x: np.maximum(x, 0.0),
+    core.leaky_relu :lambda x, negative_slope: np.maximum(x, 0.0) + negative_slope * np.minimum(x, 0.0), 
+    core.elu :lambda x, alpha: np.where(x > 0, x, alpha * (np.exp(x) - 1)),
+    core.gelu: lambda x : x * 1/2 * (1 + special.erf(x/np.sqrt(2))),
     core.square: np.square,
     core.sqrt: np.sqrt,
     core.exp: np.exp,
