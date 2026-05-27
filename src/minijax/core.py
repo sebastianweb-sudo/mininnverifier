@@ -83,6 +83,27 @@ class ReduceSumPrimitive(Primitive):
         res = super().__call__(x, axes=axes)
         return expand_dims(res, axes) if keepaxes else res
 
+class PaddingPrimitiv(Primitive):
+    def __init__(self):
+        super().__init__("pad", 1, ("config", "axes", "value"))
+
+    def __call__(
+        self,
+        x,
+        config: tuple[int, int, int] = (0, 0, 0),
+        axes: int | Sequence[int] | None = None,
+        value: float = 0.0,
+    ):
+        if axes is None:
+            axes = tuple(range(len(x.shape)))
+        elif isinstance(axes, int):
+            axes = (axes,)
+
+        assert len(config) == 3, "config must be a tuple (ℓ, r, m)"
+        ℓ, r, m = config
+        assert all(isinstance(v, int) and v >= 0 for v in (ℓ, r, m)), "config values must be non-negative integers"
+
+        return super().__call__(x, config=config, axes=axes, value=value)
 
 neg = Primitive("neg", 1)
 add = Primitive("add", 2)
@@ -102,6 +123,7 @@ expand_dims = Primitive("expand_dims", 1, ("axes",))
 moveaxis = Primitive("moveaxis", 1, ("source", "destination"))
 reshape = Primitive("reshape", 1, ("new_shape",))
 reduce_sum = ReduceSumPrimitive()
+pad = PaddingPrimitiv()
 
 
 def sub(x, y):
